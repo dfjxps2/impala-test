@@ -1,15 +1,16 @@
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 import static java.lang.System.exit;
 
 public class HiveJDBCWithKerberosTest {
     private static final String DRIVER = "org.apache.hive.jdbc.HiveDriver";
-    private static final String PASSWORD = "hive";
-    private static final String USER = "hive";
+
     public static void main(String[] args) {
         String ip = null;
         String port = null;
@@ -17,16 +18,14 @@ public class HiveJDBCWithKerberosTest {
         String keyTabPath = null;
         String userPrinciple = null;
 
-        System.out.println(args.toString());
-
-        if (args.length >= 5){
+        if (args.length >= 5) {
             ip = args[0];
             port = args[1];
             krbConfPath = args[2];
             keyTabPath = args[3];
             userPrinciple = args[4];
 
-        }else{
+        } else {
             System.out.println("ArgList: <HiveServer2/Impalad IP> <HiveServer2/Impalad Port> <KrbConfPath> <KeyTabPath> <UserPrinciple>");
             exit(-1);
         }
@@ -37,15 +36,15 @@ public class HiveJDBCWithKerberosTest {
             System.setProperty("java.security.krb5.conf", krbConfPath);
 
             Configuration configuration = new Configuration();
-            configuration.set("hadoop.security.authentication" , "Kerberos" );
-            UserGroupInformation. setConfiguration(configuration);
+            configuration.set("hadoop.security.authentication", "Kerberos");
+            UserGroupInformation.setConfiguration(configuration);
             UserGroupInformation.loginUserFromKeytab(userPrinciple, keyTabPath);
 
             Class.forName(DRIVER);
 
-            String URL = "jdbc:hive2://" + ip + ":" + port + "/default;principle=" + userPrinciple;
+            String URL = "jdbc:hive2://" + ip + ":" + port + "/default;principal=" + userPrinciple;
 
-            Connection conn = DriverManager.getConnection(URL,USER,PASSWORD);
+            Connection conn = DriverManager.getConnection(URL);
             Statement st = conn.createStatement();
 
 //            // create table
@@ -54,7 +53,7 @@ public class HiveJDBCWithKerberosTest {
             // show tables
             String sql = "show tables";
             ResultSet rs = st.executeQuery(sql);
-            while(rs.next()){
+            while (rs.next()) {
                 System.out.println(rs.getString(1));
             }
 
@@ -82,11 +81,7 @@ public class HiveJDBCWithKerberosTest {
 //            sql = "drop table if exists hive_test ";
 //            st.execute(sql);
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
